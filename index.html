@@ -23,6 +23,7 @@
   --text2:#9a9ab8;
   --red:#ff5570;
   --green:#00e5c8;
+  --purple:#b39ddb;
 }
 
 html{scroll-behavior:smooth}
@@ -314,6 +315,50 @@ h2 em{font-style:normal;color:var(--accent)}
 .sent-badge.neu{background:rgba(74,74,106,0.15);color:var(--muted)}
 .conf-text{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)}
 
+/* ── WHY INTELLIGENCE DEMO ── */
+.why-container{
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:16px;overflow:hidden;
+  margin-top:1.5rem;
+}
+.why-bar{
+  background:var(--bg3);border-bottom:1px solid var(--border);
+  padding:0.7rem 1.2rem;
+  display:flex;align-items:center;gap:0.6rem;
+}
+.why-body{padding:1.5rem}
+.why-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:1rem;
+}
+.why-card{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:10px;padding:1.2rem 1.4rem;
+}
+.why-card-title{
+  font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.14em;
+  text-transform:uppercase;margin-bottom:0.9rem;
+  display:flex;align-items:center;gap:0.5rem;
+}
+.why-card-title.drivers{color:var(--teal)}
+.why-card-title.narratives{color:var(--accent)}
+.why-card-title.causes{color:var(--purple)}
+.why-card-title.contra{color:var(--red)}
+.why-list{list-style:none}
+.why-list li{
+  font-size:0.82rem;color:var(--text2);line-height:1.6;
+  padding-left:1rem;position:relative;margin-bottom:0.55rem;
+}
+.why-list li::before{
+  content:'';position:absolute;left:0;top:0.55em;
+  width:4px;height:4px;border-radius:50%;
+  background:var(--muted);
+}
+.why-list li:last-child{margin-bottom:0}
+@media(max-width:700px){
+  .why-grid{grid-template-columns:1fr}
+}
+
 /* ── ABOUT / CONTACT ── */
 #about{background:var(--bg)}
 .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:start}
@@ -582,6 +627,54 @@ footer{
       <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)">Analysed 25 headlines · 4 shown · Updated just now</span>
         <a href="#app" class="btn-primary" style="font-size:0.72rem;padding:0.55rem 1.2rem">Open live app →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHY INTELLIGENCE BRIEF DEMO -->
+  <p class="section-sub" style="margin-top:2.5rem;margin-bottom:0">Go one level deeper with the <strong style="color:var(--text)">Why Intelligence</strong> brief — the reasoning behind the score, not just the score itself.</p>
+
+  <div class="why-container fade-in">
+    <div class="why-bar">
+      <div class="demo-dot" style="background:#ff5f57"></div>
+      <div class="demo-dot" style="background:#febc2e"></div>
+      <div class="demo-dot" style="background:#28c840"></div>
+      <span class="demo-url">sentwell.app · Why Intelligence · TSLA</span>
+    </div>
+    <div class="why-body">
+      <div class="why-grid">
+        <div class="why-card">
+          <div class="why-card-title drivers">⚡ Sentiment drivers</div>
+          <ul class="why-list">
+            <li>Mixed financial performance driving headline sentiment</li>
+            <li>Analyst upgrades or downgrades influencing market perception</li>
+            <li>Macroeconomic factors affecting sector positioning</li>
+          </ul>
+        </div>
+        <div class="why-card">
+          <div class="why-card-title narratives">◆ Emerging narratives</div>
+          <ul class="why-list">
+            <li>Tesla Inc. is being framed through a wait-and-see lens in current coverage</li>
+            <li>Competitive dynamics and market share narratives feature prominently</li>
+            <li>Long-term structural themes intersecting with near-term catalysts</li>
+          </ul>
+        </div>
+        <div class="why-card">
+          <div class="why-card-title causes">⊕ Root causes</div>
+          <ul class="why-list">
+            <li>Fundamental valuation and earnings trajectory uncertainty</li>
+            <li>Sector-wide shifts creating both headwinds and tailwinds</li>
+            <li>Strategic execution risks versus market opportunity size</li>
+          </ul>
+        </div>
+        <div class="why-card">
+          <div class="why-card-title contra">⊘ Contradictory signals</div>
+          <ul class="why-list">
+            <li>Short-term negative news contrasting with longer-term positive structural thesis</li>
+            <li>Analyst consensus diverging from media sentiment tone</li>
+            <li>Moderate conviction in dominant direction but meaningful counter-signals present</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
