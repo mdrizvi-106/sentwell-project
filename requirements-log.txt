@@ -3,4 +3,5 @@ numpy
 huggingface_hub
 transformers
 torch
+yfinance
 # add whatever headline-fetching library you use in Sentwell (e.g. requests, feedparser, an API client)
