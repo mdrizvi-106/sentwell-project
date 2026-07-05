@@ -19,6 +19,8 @@ from typing import List
 
 import numpy as np
 import pandas as pd
+import yfinance as yf
+from transformers import pipeline
 from huggingface_hub import HfApi, hf_hub_download
 from huggingface_hub.utils import EntryNotFoundError
 
@@ -30,20 +32,58 @@ HF_SPACE_REPO_ID = "smrzv/marketpulse"   # your Space's repo id
 HF_TOKEN_ENV_VAR = "HF_TOKEN"            # GitHub Actions secret name
 
 
+_model = None
+
+
+def get_model():
+    """Load FinBERT once per script run (same model Sentwell's app.py uses)."""
+    global _model
+    if _model is None:
+        _model = pipeline("sentiment-analysis", model="ProsusAI/finbert")
+    return _model
+
+
+def signed_score(label: str, score: float) -> float:
+    """
+    FinBERT's score is always a positive confidence value (0-1) --
+    it doesn't encode direction by itself. Convert label + score into
+    a single signed value so sentiment_mean actually reflects bullish
+    vs bearish lean, not just how confident the model was.
+    """
+    if label == "positive":
+        return score
+    if label == "negative":
+        return -score
+    return 0.0
+
+
 def get_todays_headline_scores(ticker: str) -> List[float]:
     """
-    REPLACE THIS with your actual Sentwell logic:
-      1. fetch today's headlines for `ticker` (whatever source you use)
-      2. run them through FinBERT
-      3. return the list of per-headline sentiment scores
-
-    Copy the relevant functions from your HF Space's app.py here.
-    Keeping it a separate function (rather than inlining) makes it a
-    clean drop-in replacement.
+    Same headline source and FinBERT scoring as Sentwell's app.py
+    (fetch_and_analyse): pull recent Yahoo Finance news for the
+    ticker, score each headline's title with FinBERT, and return
+    the signed sentiment scores.
     """
-    raise NotImplementedError(
-        "Copy your headline fetch + FinBERT scoring logic from app.py into this function"
-    )
+    try:
+        news = yf.Ticker(ticker).news[:25]
+    except Exception as e:
+        print(f"[{ticker}] news fetch failed: {e}")
+        return []
+
+    if not news:
+        return []
+
+    model = get_model()
+    scores = []
+    for article in news:
+        content = article.get("content", {})
+        title = content.get("title", "")
+        if not title:
+            continue
+        result = model(title)[0]
+        scores.append(signed_score(result["label"], result["score"]))
+
+    return scores
 
 
 def aggregate_today(ticker: str) -> dict:
