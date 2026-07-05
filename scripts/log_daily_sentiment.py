@@ -1,19 +1,22 @@
 """
 scripts/log_daily_sentiment.py
 
-Runs daily via GitHub Actions. Loops over all five tickers, scores
-today's headlines with FinBERT, appends the aggregated result to a
-local sentiment_history.csv, then pushes that updated file straight
-into the Sentwell Hugging Face Space repo.
+Runs daily via GitHub Actions. Loops over a broad set of equities
+(spanning sectors) plus major forex pairs, scores today's headlines
+with FinBERT, appends the aggregated result to a local
+sentiment_history.csv, then pushes that updated file to a separate
+Hugging Face Dataset repo (not the Space, so pushes don't trigger app
+rebuilds).
 
-IMPORTANT: `get_todays_headline_scores()` below is a placeholder.
-Replace its body with the actual headline-fetch + FinBERT scoring
-code copied over from your Sentwell app.py on Hugging Face -- this
-script can't import from the Space directly, so the logic needs to
-live here too.
+Note: Yahoo Finance's `.news` endpoint is built around company
+tickers. Forex pairs (e.g. "EURUSD=X") typically return sparse or
+empty news -- this is expected, not a bug. Those rows will just log
+0 headlines / blank sentiment on days with no coverage rather than
+crashing.
 """
 
 import os
+import time
 from datetime import date, datetime
 from typing import List
 
@@ -24,7 +27,21 @@ from transformers import pipeline
 from huggingface_hub import HfApi, hf_hub_download
 from huggingface_hub.utils import EntryNotFoundError
 
-TICKERS = ["AAPL", "MSFT", "JPM", "TSLA", "XOM"]
+# ~20 equities spanning sectors (tech, finance, EV, consumer, energy, healthcare)
+EQUITY_TICKERS = [
+    "AAPL", "MSFT", "NVDA", "GOOGL", "AMD",       # tech
+    "JPM", "BAC", "GS", "V", "MA",                 # finance
+    "TSLA", "RIVN",                                 # EV / mobility
+    "AMZN", "WMT", "COST", "SBUX",                  # consumer
+    "XOM", "CVX",                                   # energy
+    "UNH", "JNJ", "LLY",                            # healthcare
+]
+
+# Major forex pairs -- also usable for the dissertation's Forex analysis
+FOREX_PAIRS = ["EURUSD=X", "GBPUSD=X", "USDJPY=X", "USDCHF=X", "AUDUSD=X"]
+
+ALL_SYMBOLS = EQUITY_TICKERS + FOREX_PAIRS
+
 HISTORY_PATH = "sentiment_history.csv"
 
 # Fill these in to match your setup
@@ -57,17 +74,38 @@ def signed_score(label: str, score: float) -> float:
     return 0.0
 
 
-def get_todays_headline_scores(ticker: str) -> List[float]:
+def yf_fetch_with_retry(fn, retries=3, delay=4):
+    """
+    Same backoff pattern as Sentwell's app.py (yf_fetch_with_retry) --
+    Yahoo Finance rate-limits aggressively, and looping over ~25
+    symbols in one run makes hitting that limit far more likely than
+    the app's interactive single-ticker lookups.
+    """
+    for attempt in range(retries):
+        try:
+            return fn()
+        except Exception as e:
+            if "rate limit" in str(e).lower() or "too many requests" in str(e).lower():
+                if attempt < retries - 1:
+                    time.sleep(delay * (attempt + 1))
+                else:
+                    raise
+            else:
+                raise
+
+
+def get_todays_headline_scores(symbol: str) -> List[float]:
     """
     Same headline source and FinBERT scoring as Sentwell's app.py
     (fetch_and_analyse): pull recent Yahoo Finance news for the
-    ticker, score each headline's title with FinBERT, and return
-    the signed sentiment scores.
+    symbol, score each headline's title with FinBERT, and return
+    the signed sentiment scores. Forex pairs often return little or
+    no news -- that's expected, not an error.
     """
     try:
-        news = yf.Ticker(ticker).news[:25]
+        news = yf_fetch_with_retry(lambda: yf.Ticker(symbol).news[:25])
     except Exception as e:
-        print(f"[{ticker}] news fetch failed: {e}")
+        print(f"[{symbol}] news fetch failed: {e}")
         return []
 
     if not news:
@@ -86,17 +124,17 @@ def get_todays_headline_scores(ticker: str) -> List[float]:
     return scores
 
 
-def aggregate_today(ticker: str) -> dict:
-    scores = get_todays_headline_scores(ticker)
+def aggregate_today(symbol: str) -> dict:
+    scores = get_todays_headline_scores(symbol)
     if not scores:
         return {
-            "ticker": ticker,
+            "ticker": symbol,
             "date": date.today().isoformat(),
             "sentiment_mean": np.nan,
             "headline_count": 0,
         }
     return {
-        "ticker": ticker,
+        "ticker": symbol,
         "date": date.today().isoformat(),
         "sentiment_mean": float(np.mean(scores)),
         "headline_count": len(scores),
@@ -171,14 +209,15 @@ def main():
     pull_existing_history()
 
     rows = []
-    for ticker in TICKERS:
+    n = len(ALL_SYMBOLS)
+    for i, symbol in enumerate(ALL_SYMBOLS):
         try:
-            rows.append(aggregate_today(ticker))
-            print(f"[{ticker}] logged today's sentiment")
-        except NotImplementedError as e:
-            print(f"[{ticker}] SKIPPED -- {e}")
+            rows.append(aggregate_today(symbol))
+            print(f"[{symbol}] logged today's sentiment")
         except Exception as e:
-            print(f"[{ticker}] FAILED -- {e}")
+            print(f"[{symbol}] FAILED -- {e}")
+        if i < n - 1:
+            time.sleep(2)  # small gap between symbols, same spirit as app.py's pacing
 
     if rows:
         combined = append_to_history(rows)
