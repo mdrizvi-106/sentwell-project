@@ -27,9 +27,9 @@ from huggingface_hub.utils import EntryNotFoundError
 TICKERS = ["AAPL", "MSFT", "JPM", "TSLA", "XOM"]
 HISTORY_PATH = "sentiment_history.csv"
 
-# Fill these in to match your Space
-HF_SPACE_REPO_ID = "smrzv/marketpulse"   # your Space's repo id
-HF_TOKEN_ENV_VAR = "HF_TOKEN"            # GitHub Actions secret name
+# Fill these in to match your setup
+HF_DATASET_REPO_ID = "smrzv/sentwell-sentiment-history"   # separate Dataset repo (not the Space)
+HF_TOKEN_ENV_VAR = "HF_TOKEN"                              # GitHub Actions secret name
 
 
 _model = None
@@ -105,25 +105,25 @@ def aggregate_today(ticker: str) -> dict:
 
 def pull_existing_history():
     """
-    Download the current sentiment_history.csv from the HF Space (if it
-    exists yet) so today's run appends to real history instead of
+    Download the current sentiment_history.csv from the HF Dataset repo
+    (if it exists yet) so today's run appends to real history instead of
     starting over each time -- GitHub Actions runners are stateless
     between runs.
     """
     token = os.environ.get(HF_TOKEN_ENV_VAR)
     try:
         downloaded_path = hf_hub_download(
-            repo_id=HF_SPACE_REPO_ID,
-            repo_type="space",
+            repo_id=HF_DATASET_REPO_ID,
+            repo_type="dataset",
             filename=HISTORY_PATH,
             token=token,
         )
         # Copy into the working directory under the expected name
         import shutil
         shutil.copy(downloaded_path, HISTORY_PATH)
-        print(f"Pulled existing {HISTORY_PATH} from Space.")
+        print(f"Pulled existing {HISTORY_PATH} from dataset repo.")
     except EntryNotFoundError:
-        print(f"No {HISTORY_PATH} in Space yet -- starting fresh.")
+        print(f"No {HISTORY_PATH} in dataset repo yet -- starting fresh.")
     except Exception as e:
         print(f"Could not pull existing history ({e}) -- starting fresh.")
 
@@ -149,8 +149,8 @@ def append_to_history(new_rows: List[dict]) -> pd.DataFrame:
     return combined
 
 
-def push_to_hf_space():
-    """Upload the updated CSV straight into the HF Space repo."""
+def push_to_hf_dataset():
+    """Upload the updated CSV to the separate HF Dataset repo (not the Space)."""
     token = os.environ.get(HF_TOKEN_ENV_VAR)
     if not token:
         raise EnvironmentError(
@@ -160,11 +160,11 @@ def push_to_hf_space():
     api.upload_file(
         path_or_fileobj=HISTORY_PATH,
         path_in_repo=HISTORY_PATH,
-        repo_id=HF_SPACE_REPO_ID,
-        repo_type="space",
+        repo_id=HF_DATASET_REPO_ID,
+        repo_type="dataset",
         commit_message=f"Update sentiment history {date.today().isoformat()}",
     )
-    print(f"Pushed {HISTORY_PATH} to HF Space repo: {HF_SPACE_REPO_ID}")
+    print(f"Pushed {HISTORY_PATH} to dataset repo: {HF_DATASET_REPO_ID}")
 
 
 def main():
@@ -183,7 +183,7 @@ def main():
     if rows:
         combined = append_to_history(rows)
         print(f"Master history now has {len(combined)} rows.")
-        push_to_hf_space()
+        push_to_hf_dataset()
         print(f"Done. Timestamp: {datetime.utcnow().isoformat()}")
 
 
