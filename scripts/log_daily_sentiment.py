@@ -96,14 +96,14 @@ def yf_fetch_with_retry(fn, retries=3, delay=4):
                 raise
 
 
-def _rss_titles(symbol: str, count: int) -> List[str]:
+def _rss_titles(symbol: str, count: int):
     """Backup news source when Yahoo returns nothing: Yahoo Finance RSS, then Google News RSS."""
     query = symbol.replace("=X", "") + (" forex" if symbol.endswith("=X") else " stock")
     urls = [
-        f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={urllib.parse.quote(symbol)}&region=US&lang=en-US",
-        f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}&hl=en-US&gl=US&ceid=US:en",
+        ("yahoo_rss", f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={urllib.parse.quote(symbol)}&region=US&lang=en-US"),
+        ("google_news", f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}&hl=en-US&gl=US&ceid=US:en"),
     ]
-    for url in urls:
+    for source, url in urls:
         try:
             entries = feedparser.parse(url).entries[:count]
         except Exception as e:
@@ -112,15 +112,16 @@ def _rss_titles(symbol: str, count: int) -> List[str]:
         titles = [e.get("title", "").strip() for e in entries if e.get("title")]
         if titles:
             print(f"[{symbol}] {len(titles)} headlines from RSS backup ({url.split('/')[2]})")
-            return titles
-    return []
+            return titles, source
+    return [], "none"
 
 
-def get_news(symbol: str, count: int = 25) -> List[dict]:
+def get_news(symbol: str, count: int = 25):
     """
     Yahoo Finance via yfinance first; if it errors or returns nothing,
     fall back to RSS. Always returns yfinance-shaped items
-    ({"content": {"title": ...}}) so the scoring code stays the same.
+    ({"content": {"title": ...}}) so the scoring code stays the same,
+    plus the name of the source that supplied them.
     """
     items = []
     try:
@@ -129,12 +130,13 @@ def get_news(symbol: str, count: int = 25) -> List[dict]:
         items = [a for a in (raw or []) if (a.get("content") or {}).get("title")][:count]
     except Exception as e:
         print(f"[{symbol}] yfinance news failed: {e}")
-    if not items:
-        items = [{"content": {"title": t}} for t in _rss_titles(symbol, count)]
-    return items
+    if items:
+        return items, "yfinance"
+    titles, source = _rss_titles(symbol, count)
+    return [{"content": {"title": t}} for t in titles], source
 
 
-def get_todays_headline_scores(symbol: str) -> List[float]:
+def get_todays_headline_scores(symbol: str):
     """
     Same headline source and FinBERT scoring as Sentwell's app.py
     (fetch_and_analyse): pull recent Yahoo Finance news for the
@@ -142,9 +144,9 @@ def get_todays_headline_scores(symbol: str) -> List[float]:
     the signed sentiment scores. Forex pairs often return little or
     no news -- that's expected, not an error.
     """
-    news = get_news(symbol, 25)
+    news, source = get_news(symbol, 25)
     if not news:
-        return []
+        return [], source
 
     model = get_model()
     scores = []
@@ -156,23 +158,19 @@ def get_todays_headline_scores(symbol: str) -> List[float]:
         result = model(title)[0]
         scores.append(signed_score(result["label"], result["score"]))
 
-    return scores
+    return scores, source
 
 
-def aggregate_today(symbol: str) -> dict:
-    scores = get_todays_headline_scores(symbol)
-    if not scores:
-        return {
-            "ticker": symbol,
-            "date": date.today().isoformat(),
-            "sentiment_mean": np.nan,
-            "headline_count": 0,
-        }
+def aggregate_today(symbol: str, run_date: str) -> dict:
+    """run_date is fixed once per run, so a run that crosses midnight UTC
+    doesn't split one day's symbols across two dates (seen on 29/30 Aug 2026)."""
+    scores, source = get_todays_headline_scores(symbol)
     return {
         "ticker": symbol,
-        "date": date.today().isoformat(),
-        "sentiment_mean": float(np.mean(scores)),
+        "date": run_date,
+        "sentiment_mean": float(np.mean(scores)) if scores else np.nan,
         "headline_count": len(scores),
+        "news_source": source if scores else "none",
     }
 
 
@@ -213,16 +211,41 @@ def append_to_history(new_rows: List[dict]) -> pd.DataFrame:
     combined = combined.drop_duplicates(subset=["ticker", "date"], keep="last")
     combined = combined.sort_values(["ticker", "date"]).reset_index(drop=True)
 
-    combined["sentiment_ma_3"] = (
-        combined.groupby("ticker")["sentiment_mean"]
-        .transform(lambda s: s.rolling(3, min_periods=1).mean())
-    )
+    # Rows written before news_source existed all came from yfinance.
+    src = combined["news_source"] if "news_source" in combined else pd.Series(np.nan, index=combined.index)
+    backfill = np.where(combined["headline_count"] > 0, "yfinance", "none")
+    combined["news_source"] = src.astype(object).where(src.notna(), backfill)
+
+    # 3-day average over calendar days (not the last 3 rows), so it never
+    # bridges a gap such as 4 Sep - 11 Oct 2026.
+    ma = pd.Series(np.nan, index=combined.index)
+    for _, g in combined.groupby("ticker"):
+        rolled = g.set_index(pd.to_datetime(g["date"]))["sentiment_mean"].rolling("3D", min_periods=1).mean()
+        ma.loc[g.index] = rolled.to_numpy()
+    combined["sentiment_ma_3"] = ma
 
     combined.to_csv(HISTORY_PATH, index=False)
     return combined
 
 
-def push_to_hf_dataset():
+def stale_symbols(combined: pd.DataFrame, run_date: str, days: int = 3) -> List[str]:
+    """
+    Symbols whose sentiment was identical on each of the last `days` weekdays
+    (headline_count > 0). Weekend repeats are normal; weekday repeats mean the
+    source keeps returning the same old articles (USDJPY, Jul-Sep 2026).
+    """
+    stale = []
+    end = pd.Timestamp(run_date)
+    for ticker, g in combined.groupby("ticker"):
+        g = g.assign(_d=pd.to_datetime(g["date"]))
+        g = g[(g["_d"] <= end) & (g["_d"].dt.dayofweek < 5) & (g["headline_count"] > 0)].tail(days)
+        if len(g) == days and g["_d"].iloc[0] >= end - pd.Timedelta(days=days + 4) \
+                and g["sentiment_mean"].round(6).nunique() == 1:
+            stale.append(ticker)
+    return stale
+
+
+def push_to_hf_dataset(run_date: str):
     """Upload the updated CSV to the separate HF Dataset repo (not the Space)."""
     token = os.environ.get(HF_TOKEN_ENV_VAR)
     if not token:
@@ -235,21 +258,23 @@ def push_to_hf_dataset():
         path_in_repo=HISTORY_PATH,
         repo_id=HF_DATASET_REPO_ID,
         repo_type="dataset",
-        commit_message=f"Update sentiment history {date.today().isoformat()}",
+        commit_message=f"Update sentiment history {run_date}",
     )
     print(f"Pushed {HISTORY_PATH} to dataset repo: {HF_DATASET_REPO_ID}")
 
 
 def main():
     pull_existing_history()
+    run_date = datetime.utcnow().date().isoformat()   # one date for the whole run
+    print(f"Run date: {run_date}")
 
     rows = []
     n = len(ALL_SYMBOLS)
     for i, symbol in enumerate(ALL_SYMBOLS):
         try:
-            row = aggregate_today(symbol)
+            row = aggregate_today(symbol, run_date)
             rows.append(row)
-            print(f"[{symbol}] logged {row['headline_count']} headlines")
+            print(f"[{symbol}] logged {row['headline_count']} headlines ({row['news_source']})")
         except Exception as e:
             print(f"[{symbol}] FAILED -- {e}")
         if i < n - 1:
@@ -265,7 +290,9 @@ def main():
     if rows:
         combined = append_to_history(rows)
         print(f"Master history now has {len(combined)} rows.")
-        push_to_hf_dataset()
+        stale = stale_symbols(combined, run_date)
+        print(f"Stale (same score on last 3 weekdays): {stale or 'none'}")
+        push_to_hf_dataset(run_date)
         print(f"Done. Timestamp: {datetime.utcnow().isoformat()}")
 
 
