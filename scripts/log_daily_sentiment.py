@@ -17,9 +17,11 @@ crashing.
 
 import os
 import time
+import urllib.parse
 from datetime import date, datetime
 from typing import List
 
+import feedparser
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -94,6 +96,44 @@ def yf_fetch_with_retry(fn, retries=3, delay=4):
                 raise
 
 
+def _rss_titles(symbol: str, count: int) -> List[str]:
+    """Backup news source when Yahoo returns nothing: Yahoo Finance RSS, then Google News RSS."""
+    query = symbol.replace("=X", "") + (" forex" if symbol.endswith("=X") else " stock")
+    urls = [
+        f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={urllib.parse.quote(symbol)}&region=US&lang=en-US",
+        f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}&hl=en-US&gl=US&ceid=US:en",
+    ]
+    for url in urls:
+        try:
+            entries = feedparser.parse(url).entries[:count]
+        except Exception as e:
+            print(f"[{symbol}] RSS failed ({url.split('/')[2]}): {e}")
+            continue
+        titles = [e.get("title", "").strip() for e in entries if e.get("title")]
+        if titles:
+            print(f"[{symbol}] {len(titles)} headlines from RSS backup ({url.split('/')[2]})")
+            return titles
+    return []
+
+
+def get_news(symbol: str, count: int = 25) -> List[dict]:
+    """
+    Yahoo Finance via yfinance first; if it errors or returns nothing,
+    fall back to RSS. Always returns yfinance-shaped items
+    ({"content": {"title": ...}}) so the scoring code stays the same.
+    """
+    items = []
+    try:
+        t = yf.Ticker(symbol)
+        raw = yf_fetch_with_retry(lambda: t.get_news(count=count) if hasattr(t, "get_news") else t.news)
+        items = [a for a in (raw or []) if (a.get("content") or {}).get("title")][:count]
+    except Exception as e:
+        print(f"[{symbol}] yfinance news failed: {e}")
+    if not items:
+        items = [{"content": {"title": t}} for t in _rss_titles(symbol, count)]
+    return items
+
+
 def get_todays_headline_scores(symbol: str) -> List[float]:
     """
     Same headline source and FinBERT scoring as Sentwell's app.py
@@ -102,12 +142,7 @@ def get_todays_headline_scores(symbol: str) -> List[float]:
     the signed sentiment scores. Forex pairs often return little or
     no news -- that's expected, not an error.
     """
-    try:
-        news = yf_fetch_with_retry(lambda: yf.Ticker(symbol).news[:25])
-    except Exception as e:
-        print(f"[{symbol}] news fetch failed: {e}")
-        return []
-
+    news = get_news(symbol, 25)
     if not news:
         return []
 
@@ -212,12 +247,20 @@ def main():
     n = len(ALL_SYMBOLS)
     for i, symbol in enumerate(ALL_SYMBOLS):
         try:
-            rows.append(aggregate_today(symbol))
-            print(f"[{symbol}] logged today's sentiment")
+            row = aggregate_today(symbol)
+            rows.append(row)
+            print(f"[{symbol}] logged {row['headline_count']} headlines")
         except Exception as e:
             print(f"[{symbol}] FAILED -- {e}")
         if i < n - 1:
             time.sleep(2)  # small gap between symbols, same spirit as app.py's pacing
+
+    empty = [r["ticker"] for r in rows if r["headline_count"] == 0]
+    print(f"Symbols with headlines: {len(rows) - len(empty)}/{n}; no headlines: {empty or 'none'}")
+    if rows and len(empty) == len(rows):
+        # Every symbol came back empty: the news source is down. Fail loudly
+        # instead of silently writing a day of blank rows.
+        raise SystemExit("No headlines for any symbol today -- news source unavailable, history not updated.")
 
     if rows:
         combined = append_to_history(rows)

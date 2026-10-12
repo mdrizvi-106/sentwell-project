@@ -6,15 +6,18 @@ on:
     - cron: "0 22 * * *"
   workflow_dispatch: {}   # lets you trigger it manually from the Actions tab to test
 
+permissions:
+  contents: write   # lets the keepalive step commit
+
 jobs:
   log-sentiment:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -25,3 +28,21 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python scripts/log_daily_sentiment.py
+
+      - name: Keep schedule alive (commit if repo idle 30+ days)
+        # GitHub disables scheduled workflows in public repos after 60 days
+        # without commits (this happened on 4 Sep 2026). A tiny commit once
+        # a month keeps the daily job running.
+        if: always()   # keep alive even if today's news fetch failed
+        run: |
+          last=$(git log -1 --format=%ct)
+          if [ $(( $(date +%s) - last )) -gt $((30*86400)) ]; then
+            date -u +%Y-%m-%dT%H:%M:%SZ > .github/last_run.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .github/last_run.txt
+            git commit -m "chore: keep scheduled workflow active"
+            git push
+          else
+            echo "Repo active within 30 days, no keepalive commit needed."
+          fi
