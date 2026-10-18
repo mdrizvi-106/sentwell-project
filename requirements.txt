@@ -1,7 +1,14 @@
-streamlit
-yfinance
-plotly
-pandas
-transformers
-feedparser
-groq
+Name: streamlit
+Version: 1.65.0
+Name: yfinance
+Version: 1.7.0
+Name: plotly
+Version: 7.1.0
+Name: pandas
+Version: 3.0.6
+Name: transformers
+Version: 5.19.0
+Name: feedparser
+Version: 6.0.14
+Name: groq
+Version: 1.7.0
