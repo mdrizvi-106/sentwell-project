@@ -70,6 +70,15 @@ then a question or "here's what it means".
    problem is in the input, not the model.
 3. **Positive → negative (the most serious error type).** TODO: ticker, headline, and one line on why.
 
+## Reproduced on AWS (19 Oct 2026)
+- Ran `eval/eval_finbert.py` on an AWS EC2 t3.small (Ubuntu 24.04, Python 3.12, eu-north-1),
+  reading `headlines.csv` from S3 and writing `finbert_predictions.csv` back to S3.
+- Access through an IAM role limited to this one bucket (no access keys on the machine or in code).
+- Same package versions as the Docker image (torch 2.14.1 CPU, transformers 5.19.0, pandas 3.0.6).
+- Result: identical metrics to the local run (accuracy 0.4316, macro-F1 0.4429, same confusion matrix).
+- Wall time: 29.3 s, including the first-time FinBERT download.
+- Instance terminated after the run.
+
 ### Limitations
 - One labeller (me), labelled quickly in one sitting; some headlines were judgement calls or guesses. My labels lean positive (49 of 95), and the audit found 9 cases where I broke my own rules. A careful second pass would likely raise FinBERT’s agreement score.
 - 95 headlines from a single day's news: a small sample, not a benchmark.
