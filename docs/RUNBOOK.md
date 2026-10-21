@@ -1,25 +1,29 @@
 # Runbook: SentWell
 
 ## Run the app locally
-pip install groq==1.7.0 streamlit==1.65.0 plotly==7.1.0
+```bash
+pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.txt
 set -a; source .env; set +a
 streamlit run app.py
-
+```
 ## Run with Docker
+```bash
 docker build -t sentwell .
 docker run --rm -p 8501:8501 --env-file .env -v hf-cache:/root/.cache/huggingface sentwell
+```
 
 ## Daily pipeline
-- Schedule:
-    - 21:15 UTC daily: after the US close in both summer and winter time.
-    - Scheduled runs can start hours late; at 22:00 some ran past midnight
-    - UTC and split one day's symbols across two dates (the script now also
-    - fixes the run date once at the start).
+- **Schedule:** 21:15 UTC daily (after the US market close in summer and winter time). Scheduled runs can start late, so the script fixes one run date at the start of each run.
+- **Run manually:** Actions → Log daily sentiment → Run workflow
 - Secrets needed: 
-    - GROQ API KEY
+    - **Daily pipeline (GitHub Actions secret):** `HF_TOKEN`, used to push rows to the Hugging Face dataset
+    - **App:** `GROQ_API_KEY` in `.env` locally or passed with `--env-file` in Docker; never committed
 
 ## Run the tests
+```bash
 python -m pytest -v
+```
 
 ## When things go wrong
 | Symptom | Likely cause | Fix |
@@ -32,4 +36,4 @@ python -m pytest -v
 | WHY brief shows the fallback message | `GROQ_API_KEY` missing (locally: `.env` not loaded) or Groq returned invalid JSON | Locally: `set -a; source .env; set +a`. Docker: `--env-file .env`. Never commit `.env`. |
 
 ## Changing a model or prompt
-TODO: edit config.py only, bump the version, re-run EVAL-1, note it in the PR
+Edit `config.py` only and bump the version (e.g. `why-v1` → `why-v2`). Re-run the EVAL-1 evaluation and record the old and new metrics in the pull request.
