@@ -15,6 +15,9 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parent.parent / "scripts"))
 import log_daily_sentiment as lds  # noqa: E402
 
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+import config  # noqa: E402
+
 
 # ---------- signed_score: FinBERT label + confidence -> signed value ----------
 
@@ -83,6 +86,7 @@ def test_aggregate_today_averages_scores(monkeypatch):
     assert row["headline_count"] == 2
     assert row["sentiment_mean"] == pytest.approx(0.2)
     assert row["news_source"] == "yahoo"
+    assert row["model_revision"] == config.FINBERT_REVISION[:7]
 
 
 def test_aggregate_today_no_headlines(monkeypatch):

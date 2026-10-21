@@ -15,6 +15,10 @@ empty news -- this is expected, not a bug. Those rows will just log
 crashing.
 """
 
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+import config
 import os
 import time
 import urllib.parse
@@ -58,8 +62,7 @@ def get_model():
     """Load FinBERT once per script run (same model Sentwell's app.py uses)."""
     global _model
     if _model is None:
-        _model = pipeline("sentiment-analysis", model="ProsusAI/finbert")
-    return _model
+        _model = pipeline("sentiment-analysis", model=config.FINBERT_MODEL, revision=config.FINBERT_REVISION)
 
 
 def signed_score(label: str, score: float) -> float:
@@ -171,6 +174,7 @@ def aggregate_today(symbol: str, run_date: str) -> dict:
         "sentiment_mean": float(np.mean(scores)) if scores else np.nan,
         "headline_count": len(scores),
         "news_source": source if scores else "none",
+        "model_revision": config.FINBERT_REVISION[:7],
     }
 
 
