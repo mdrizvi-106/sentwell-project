@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 
 # 4. Copy your app in
 COPY app.py .
+COPY config.py .
 
 # 5. Streamlit listens on port 8501
 EXPOSE 8501

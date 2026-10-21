@@ -63,6 +63,7 @@ def get_model():
     global _model
     if _model is None:
         _model = pipeline("sentiment-analysis", model=config.FINBERT_MODEL, revision=config.FINBERT_REVISION)
+    return _model
 
 
 def signed_score(label: str, score: float) -> float:

@@ -100,3 +100,10 @@ def test_aggregate_today_no_headlines(monkeypatch):
     assert row["headline_count"] == 0
     assert row["news_source"] == "none"
     assert np.isnan(row["sentiment_mean"])
+
+def test_get_model_returns_loaded_pipeline(monkeypatch):
+    # Replace the real (slow) pipeline with a fake so no model is downloaded
+    fake = object()
+    monkeypatch.setattr(lds, "pipeline", lambda *args, **kwargs: fake)
+    monkeypatch.setattr(lds, "_model", None)
+    assert lds.get_model() is fake
