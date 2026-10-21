@@ -50,6 +50,16 @@ Plotly charts + summary dashboard
 
 ---
 
+
+## Documentation
+
+- [Model card](docs/MODEL_CARD.md): what the model does, how well it performs (EVAL-1), known limitations and monitoring
+- [Runbook](docs/RUNBOOK.md): how to run, deploy and troubleshoot SentWell
+
+
+---
+
+
 ## Tech stack
 
 - **FinBERT** — `ProsusAI/finbert` via HuggingFace Transformers
