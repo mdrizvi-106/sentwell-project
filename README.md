@@ -75,8 +75,8 @@ Plotly charts + summary dashboard
 ## Run locally
 
 ```bash
-git clone https://github.com/mdrizvi-106/sentwell
-cd sentwell
+git clone https://github.com/mdrizvi-106/sentwell-project
+cd sentwell-project
 pip install -r requirements.txt
 ```
 
