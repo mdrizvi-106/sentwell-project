@@ -15,6 +15,9 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parent.parent / "scripts"))
 import log_daily_sentiment as lds  # noqa: E402
 
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+import config  # noqa: E402
+
 
 # ---------- signed_score: FinBERT label + confidence -> signed value ----------
 
@@ -83,6 +86,7 @@ def test_aggregate_today_averages_scores(monkeypatch):
     assert row["headline_count"] == 2
     assert row["sentiment_mean"] == pytest.approx(0.2)
     assert row["news_source"] == "yahoo"
+    assert row["model_revision"] == config.FINBERT_REVISION[:7]
 
 
 def test_aggregate_today_no_headlines(monkeypatch):
@@ -96,3 +100,10 @@ def test_aggregate_today_no_headlines(monkeypatch):
     assert row["headline_count"] == 0
     assert row["news_source"] == "none"
     assert np.isnan(row["sentiment_mean"])
+
+def test_get_model_returns_loaded_pipeline(monkeypatch):
+    # Replace the real (slow) pipeline with a fake so no model is downloaded
+    fake = object()
+    monkeypatch.setattr(lds, "pipeline", lambda *args, **kwargs: fake)
+    monkeypatch.setattr(lds, "_model", None)
+    assert lds.get_model() is fake

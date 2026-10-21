@@ -1,3 +1,4 @@
+import config
 import streamlit as st
 import yfinance as yf
 import plotly.express as px
@@ -753,7 +754,7 @@ if "analysis_results" not in st.session_state:
 # ── Model ─────────────────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner=False)
 def load_model():
-    return pipeline("sentiment-analysis", model="ProsusAI/finbert")
+    return pipeline("sentiment-analysis", model=config.FINBERT_MODEL, revision=config.FINBERT_REVISION)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 COLOUR = {'positive': '#00ff9d', 'negative': '#ff4f6a', 'neutral': '#5a5a7a'}
@@ -1002,7 +1003,7 @@ Write a clear, insightful 3-sentence summary covering: (1) the overall sentiment
 
         client = Groq()
         message = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model=config.LLM_MODEL,
             max_tokens=300,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -1091,7 +1092,7 @@ Be specific to the company and headlines. No generic platitudes."""
     try:
         client = Groq()
         message = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model=config.LLM_MODEL,
             max_tokens=600,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -1341,7 +1342,7 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("**About Sentwell**")
-    st.caption("Sentwell uses FinBERT, a BERT model fine-tuned on financial text, to classify news headlines as positive, negative, or neutral. WHY Intelligence powered by LLaMA 3.1 via Groq.")
+    st.caption(f"Sentwell uses FinBERT, a BERT model fine-tuned on financial text, to classify news headlines as positive, negative, or neutral. WHY Intelligence powered by LLaMA 3.1 via Groq. Versions: FinBERT @ {config.FINBERT_REVISION[:7]} · {config.LLM_MODEL} · prompts {config.WHY_PROMPT_VERSION}")
     st.markdown("[GitHub](https://github.com/mdrizvi-106) · [LinkedIn](https://linkedin.com/in/sam1061)")
 
 # ── HERO ──────────────────────────────────────────────────────────────────────
