@@ -34,6 +34,7 @@ python -m pytest -v
 | Daily workflow stopped running | GitHub disables scheduled workflows in public repos after 60 days without commits (happened 4 Sep 2026). | Re-enable it under Actions → Log daily sentiment → Enable workflow. The keepalive step commits a timestamp if the repo has been idle 30+ days; check that step still exists in `daily_sentiment.yml`. Run it manually once with "Run workflow" to confirm. |
 | `ModuleNotFoundError: No module named 'config'` in Docker | `config.py` not copied into the image | Dockerfile must have `COPY config.py .` next to `COPY app.py .`, then rebuild |
 | WHY brief shows the fallback message | `GROQ_API_KEY` missing (locally: `.env` not loaded) or Groq returned invalid JSON | Locally: `set -a; source .env; set +a`. Docker: `--env-file .env`. Never commit `.env`. |
+| Summary or WHY shows generic or empty text | Model retired (`model_not_found`), auth error, or reasoning used the whole token budget | Check the terminal for the error; confirm `config.LLM_MODEL` is in Groq's model list and `LLM_REASONING_EFFORT` is set |
 
 ## Changing a model or prompt
 Edit `config.py` only and bump the version (e.g. `why-v1` → `why-v2`). Re-run the EVAL-1 evaluation and record the old and new metrics in the pull request.
