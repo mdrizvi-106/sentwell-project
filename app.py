@@ -1006,6 +1006,7 @@ Write a clear, insightful 3-sentence summary covering: (1) the overall sentiment
         message = client.chat.completions.create(
             model=config.LLM_MODEL,
             max_tokens=300,
+            reasoning_effort=config.LLM_REASONING_EFFORT,
             messages=[{"role": "user", "content": prompt}]
         )
         return message.choices[0].message.content
@@ -1064,6 +1065,7 @@ def generate_why_intelligence(sym, df, stock_info):
         message = client.chat.completions.create(
             model=config.LLM_MODEL,
             max_tokens=600,
+            reasoning_effort=config.LLM_REASONING_EFFORT,
             messages=[{"role": "user", "content": prompt}]
         )
         raw = message.choices[0].message.content
