@@ -10,9 +10,9 @@
 
 ## What is Sentwell?
 
-Sentwell scans live financial news, runs it through **FinBERT** — a BERT model fine-tuned exclusively on financial text — and tells you whether the market mood around a stock is bullish, bearish, or neutral. In seconds.
+Sentwell scans live financial news, runs it through **FinBERT** — a BERT model fine-tuned exclusively on financial text — and tells you whether the market mood around a stock is bullish, bearish, or neutral.
 
-Type in up to 3 tickers. Get sentiment scores, confidence ratings, an AI-generated market brief, and trend charts. No noise. Just signal.
+Type in up to 3 tickers. Get sentiment scores, confidence ratings, an AI-generated market brief, and trend charts.
 
 **Live app →** [huggingface.co/spaces/smrzv/marketpulse](https://huggingface.co/spaces/smrzv/marketpulse)
 
@@ -22,7 +22,7 @@ Type in up to 3 tickers. Get sentiment scores, confidence ratings, an AI-generat
 
 | Feature | Description |
 |---|---|
-| **FinBERT NLP** | Financial-grade sentiment classification — far more accurate on market text than general-purpose models |
+| **FinBERT NLP** | Finance-specific sentiment model, evaluated on 95 hand-labelled headlines (macro-F1 0.44 vs 0.23 baseline) |
 | **Live news feed** | Pulls up to 25 headlines per ticker from Yahoo Finance in real time |
 | **AI summaries** | LLaMA 3.1 via Groq synthesises sentiment into a 3-sentence market brief |
 | **Multi-ticker** | Analyse and compare up to 3 stocks simultaneously |
@@ -50,6 +50,16 @@ Plotly charts + summary dashboard
 
 ---
 
+
+## Documentation
+
+- [Model card](docs/MODEL_CARD.md): what the model does, how well it performs (EVAL-1), known limitations and monitoring
+- [Runbook](docs/RUNBOOK.md): how to run, deploy and troubleshoot SentWell
+
+
+---
+
+
 ## Tech stack
 
 - **FinBERT** — `ProsusAI/finbert` via HuggingFace Transformers
@@ -65,8 +75,8 @@ Plotly charts + summary dashboard
 ## Run locally
 
 ```bash
-git clone https://github.com/mdrizvi-106/sentwell
-cd sentwell
+git clone https://github.com/mdrizvi-106/sentwell-project
+cd sentwell-project
 pip install -r requirements.txt
 ```
 
