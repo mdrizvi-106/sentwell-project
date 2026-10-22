@@ -6,11 +6,12 @@ WORKDIR /app
 
 # 3. Install libraries first (cached, so rebuilds are fast)
 COPY requirements.txt .
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
+RUN pip install --no-cache-dir torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu \
  && pip install --no-cache-dir -r requirements.txt
 
 # 4. Copy your app in
 COPY app.py .
+COPY config.py .
 
 # 5. Streamlit listens on port 8501
 EXPOSE 8501
