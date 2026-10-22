@@ -35,5 +35,8 @@ python -m pytest -v
 | `ModuleNotFoundError: No module named 'config'` in Docker | `config.py` not copied into the image | Dockerfile must have `COPY config.py .` next to `COPY app.py .`, then rebuild |
 | WHY brief shows the fallback message | `GROQ_API_KEY` missing (locally: `.env` not loaded) or Groq returned invalid JSON | Locally: `set -a; source .env; set +a`. Docker: `--env-file .env`. Never commit `.env`. |
 
+## Troubleshoot
+- Summary or WHY shows generic or empty text → check the terminal for model_not_found, an auth error or an empty reply; check config.LLM_MODEL is in Groq’s model list.
+
 ## Changing a model or prompt
 Edit `config.py` only and bump the version (e.g. `why-v1` → `why-v2`). Re-run the EVAL-1 evaluation and record the old and new metrics in the pull request.

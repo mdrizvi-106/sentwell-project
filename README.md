@@ -1,6 +1,6 @@
 # Sentwell · Financial Sentiment Intelligence
 
-> Real-time stock news sentiment analysis powered by FinBERT and LLaMA 3.1
+> Real-time stock news sentiment analysis powered by FinBERT and gpt-oss-20b (via Groq)
 
 [![Live App](https://img.shields.io/badge/Live%20App-Hugging%20Face-yellow?style=flat-square)](https://huggingface.co/spaces/smrzv/marketpulse)
 [![GitHub](https://img.shields.io/badge/GitHub-mdrizvi--106-black?style=flat-square&logo=github)](https://github.com/mdrizvi-106)
@@ -24,7 +24,7 @@ Type in up to 3 tickers. Get sentiment scores, confidence ratings, an AI-generat
 |---|---|
 | **FinBERT NLP** | Finance-specific sentiment model, evaluated on 95 hand-labelled headlines (macro-F1 0.44 vs 0.23 baseline) |
 | **Live news feed** | Pulls up to 25 headlines per ticker from Yahoo Finance in real time |
-| **AI summaries** | LLaMA 3.1 via Groq synthesises sentiment into a 3-sentence market brief |
+| **AI summaries** |  gpt-oss-20b (via Groq) synthesises sentiment into a 3-sentence market brief |
 | **Multi-ticker** | Analyse and compare up to 3 stocks simultaneously |
 | **Trend analysis** | Track how sentiment has shifted day by day |
 | **Watchlist** | Save your key tickers across sessions |
@@ -43,7 +43,7 @@ Yahoo Finance live news feed (up to 25 headlines)
 FinBERT (ProsusAI) — classifies each headline as
 positive / negative / neutral + confidence score
         ↓
-LLaMA 3.1 (Groq) — generates 3-sentence AI market brief
+gpt-oss-20b (via Groq) — generates 3-sentence AI market brief
         ↓
 Plotly charts + summary dashboard
 ```
@@ -63,7 +63,7 @@ Plotly charts + summary dashboard
 ## Tech stack
 
 - **FinBERT** — `ProsusAI/finbert` via HuggingFace Transformers
-- **LLaMA 3.1 8B** — via Groq API for AI summaries
+- **gpt-oss-20b** — via Groq API for AI summaries
 - **yFinance** — live news and price data
 - **Streamlit** — UI framework
 - **Plotly** — interactive charts

@@ -1005,6 +1005,7 @@ Write a clear, insightful 3-sentence summary covering: (1) the overall sentiment
         message = client.chat.completions.create(
             model=config.LLM_MODEL,
             max_tokens=300,
+            reasoning_effort=config.LLM_REASONING_EFFORT,
             messages=[{"role": "user", "content": prompt}]
         )
         return message.choices[0].message.content
@@ -1094,6 +1095,7 @@ Be specific to the company and headlines. No generic platitudes."""
         message = client.chat.completions.create(
             model=config.LLM_MODEL,
             max_tokens=600,
+            reasoning_effort=config.LLM_REASONING_EFFORT,
             messages=[{"role": "user", "content": prompt}]
         )
         raw = message.choices[0].message.content.strip()

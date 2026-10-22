@@ -9,7 +9,9 @@ FINBERT_MODEL = "ProsusAI/finbert"
 FINBERT_REVISION = "0bc2ac10dda6929bcb1f77ccc43c7ec5c424f031"
 
 # LLM used for the WHY intelligence and AI summary (Groq)
-LLM_MODEL = "llama-3.1-8b-instant"
+LLM_MODEL = "openai/gpt-oss-20b"
+LLM_REASONING_EFFORT = "low"
+
 
 # Bump these whenever the prompt text changes (v1 -> v2 ...)
 WHY_PROMPT_VERSION = "why-v1"
