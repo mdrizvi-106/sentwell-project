@@ -61,12 +61,23 @@ def parse_why_response(raw):
       "missing_keys" - parsed dict is missing one of REQUIRED_KEYS
     data is the dict when status is "ok", otherwise None.
     """
-    # TODO 1: if raw is None or raw.strip() == "": return None, "empty"
-    # TODO 2: if the reply contains ``` fences, keep only the text between them,
-    #         and drop a leading "json" (copy the cleanup logic from app.py)
-    # TODO 3: try json.loads; on json.JSONDecodeError return None, "invalid_json"
-    # TODO 4: if it isn't a dict, return None, "wrong_type"
-    # TODO 5: if any key in REQUIRED_KEYS is missing, return None, "missing_keys"
-    # TODO 6: if any value isn't a list of strings, return None, "wrong_type"
-    # TODO 7: return data, "ok"
+    if raw is None or raw.strip() == "": 
+        return None, "empty"
+    if "```" in raw:
+        raw = raw.split("```")[1] 
+        if raw.startswith("json"):
+            raw = raw[4:]
+            
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return None, "invalid_json"
+    if not isinstance(data, dict):
+        return None, "wrong_type"
+    if any(key not in data for key in REQUIRED_KEYS):
+        return None, "missing_keys"
+    for key in REQUIRED_KEYS:
+        if not isinstance(data[key], list) or not all(isinstance(item, str) for item in data[key]):
+            return None, "wrong_type"
+    return data, "ok"
     ...

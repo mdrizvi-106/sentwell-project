@@ -13,7 +13,7 @@ import re
 import urllib.parse
 import feedparser
 from groq import Groq
-from why_brief import build_why_prompt
+from why_brief import build_why_prompt, parse_why_response
 
 # ── Lock Streamlit to dark theme regardless of OS light/dark mode ─────────────
 _cfg_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".streamlit")
@@ -1066,20 +1066,12 @@ def generate_why_intelligence(sym, df, stock_info):
             max_tokens=600,
             messages=[{"role": "user", "content": prompt}]
         )
-        raw = message.choices[0].message.content.strip()
-        # Clean up potential markdown fences
-        if "```" in raw:
-            raw = raw.split("```")[1] if "```" in raw else raw
-            if raw.startswith("json"):
-                raw = raw[4:]
-        import json
-        data = json.loads(raw)
-        # Validate structure
-        for key in ["drivers", "narratives", "root_causes", "contradictions"]:
-            if key not in data or not isinstance(data[key], list):
-                return fallback
-        return data
-    except Exception:
+        raw = message.choices[0].message.content
+        data, status = parse_why_response(raw)
+        print("WHY status:", status)                      # temporary
+        return data if status == "ok" else fallback
+    except Exception as e:
+        print("WHY failed:", repr(e))                     # temporary
         return fallback
 
 
