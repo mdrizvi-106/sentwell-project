@@ -13,6 +13,7 @@ import re
 import urllib.parse
 import feedparser
 from groq import Groq
+from why_brief import build_why_prompt
 
 # ── Lock Streamlit to dark theme regardless of OS light/dark mode ─────────────
 _cfg_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".streamlit")
@@ -1028,43 +1029,12 @@ def generate_why_intelligence(sym, df, stock_info):
     Returns a dict with 4 keys, each containing HTML-safe bullet points.
     """
     company = get_company_name(sym)
-    pos = len(df[df['sentiment'] == 'positive'])
-    neg = len(df[df['sentiment'] == 'negative'])
-    neu = len(df[df['sentiment'] == 'neutral'])
     dom = df['sentiment'].mode()[0]
     price = stock_info.get('price')
     chg = stock_info.get('change')
     price_str = f"${price:,.2f} ({'+' if chg and chg >= 0 else ''}{chg:.2f}% today)" if price and chg else "N/A"
 
-    # Use all headlines ranked by confidence
-    headlines_pos = df[df['sentiment']=='positive'].sort_values('score', ascending=False)['headline'].head(8).tolist()
-    headlines_neg = df[df['sentiment']=='negative'].sort_values('score', ascending=False)['headline'].head(8).tolist()
-    headlines_neu = df[df['sentiment']=='neutral'].sort_values('score', ascending=False)['headline'].head(5).tolist()
-
-    all_headlines = "\n".join(
-        [f"[POSITIVE] {h}" for h in headlines_pos] +
-        [f"[NEGATIVE] {h}" for h in headlines_neg] +
-        [f"[NEUTRAL]  {h}" for h in headlines_neu]
-    )
-
-    prompt = f"""You are a senior equity analyst conducting deep sentiment analysis on {company} ({sym}).
-Current price: {price_str}
-Sentiment: {pos} positive, {neg} negative, {neu} neutral headlines. Dominant: {dom.upper()}.
-All headlines with their sentiment labels:
-{all_headlines}
-Analyse WHY the sentiment is what it is. Respond ONLY with a JSON object (no markdown, no preamble) with exactly these 4 keys, each containing a list of 3-4 concise bullet strings:
-{{
-  "drivers": ["...", "...", "..."],
-  "narratives": ["...", "...", "..."],
-  "root_causes": ["...", "...", "..."],
-  "contradictions": ["...", "...", "..."]
-}}
-Definitions:
-- "drivers": The specific, concrete factors actively pushing sentiment in the dominant direction (product launches, earnings beats/misses, partnerships, macro tailwinds/headwinds, executive decisions).
-- "narratives": The overarching story or theme the market is telling about this company right now — what is the dominant frame investors/media are using? Include emerging counter-narratives.
-- "root_causes": The deeper, underlying structural or fundamental reasons behind the sentiment — not just what happened, but WHY it matters (competitive dynamics, industry shifts, valuation concerns, regulatory environment).
-- "contradictions": Conflicting signals present in the headlines — places where positive and negative sentiment coexist, or where short-term and long-term outlooks diverge.
-Be specific to the company and headlines. No generic platitudes."""
+    prompt = build_why_prompt(company, sym, price_str, df)
 
     fallback = {
         "drivers": [
