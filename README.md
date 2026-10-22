@@ -24,7 +24,7 @@ Type in up to 3 tickers. Get sentiment scores, confidence ratings, an AI-generat
 |---|---|
 | **FinBERT NLP** | Finance-specific sentiment model, evaluated on 95 hand-labelled headlines (macro-F1 0.44 vs 0.23 baseline) |
 | **Live news feed** | Pulls up to 25 headlines per ticker from Yahoo Finance in real time |
-| **AI summaries** |  gpt-oss-20b (via Groq) synthesises sentiment into a 3-sentence market brief |
+| **AI summaries** | gpt-oss-20b (via Groq) synthesises sentiment into a 3-sentence market brief |
 | **Multi-ticker** | Analyse and compare up to 3 stocks simultaneously |
 | **Trend analysis** | Track how sentiment has shifted day by day |
 | **Watchlist** | Save your key tickers across sessions |

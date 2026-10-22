@@ -3,9 +3,9 @@
 ## Overview
 - **Task:** classify financial news headlines as positive, negative or neutral, then average the signed scores per symbol per day
 - **Model:** ProsusAI/finbert (BERT fine-tuned on financial text), pinned to revision `0bc2ac1` in `config.py`
-- **LLM layer:** llama-3.1-8b-instant via the Groq API writes the WHY brief and the AI summary (prompt versions `why-v1` and `summary-v1`). The WHY output is validated as JSON; if validation fails, the app shows a safe fallback instead.
-- **Owner:** Mohamed Rizvi Shaik Abdulla · **Last updated:** 21 Oct 2026
+- **LLM layer:** openai/gpt-oss-20b (reasoning_effort "low") via the Groq API writes the WHY brief and the AI summary (prompt versions `why-v1` and `summary-v1`). The WHY output is validated as JSON; if validation fails, the app shows a safe fallback instead.
 - 22 Oct 2026: **switched from llama-3.1-8b-instant** (retired by Groq; all LLM calls were silently falling back) to openai/gpt-oss-20b with reasoning_effort='low' (without it, reasoning used the whole token budget and returned empty answers).
+- **Owner:** Mohamed Rizvi Shaik Abdulla · **Last updated:** 22 Oct 2026
 
 ## Intended use
 - Research and portfolio demonstration of news-sentiment monitoring for 21 US equities and 5 major FX pairs
